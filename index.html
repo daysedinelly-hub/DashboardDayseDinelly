@@ -53,6 +53,7 @@
         .filters {
             display: flex;
             gap: 15px;
+            flex-wrap: wrap; /* Garante que os filtros quebrem linha em telas menores */
         }
 
         select {
@@ -182,13 +183,27 @@
     <header>
         <h1>Dashboard de Vendas Q1 2025</h1>
         <div class="filters">
+            <!-- Filtro de Região -->
             <select id="regionFilter" onchange="updateDashboard()">
                 <option value="all">Todas as Regiões</option>
-                <!-- Opções preenchidas via JS -->
             </select>
+            
+            <!-- Filtro de Vendedor -->
             <select id="sellerFilter" onchange="updateDashboard()">
                 <option value="all">Todos os Vendedores</option>
-                <!-- Opções preenchidas via JS -->
+            </select>
+
+            <!-- NOVO: Filtro de Produto -->
+            <select id="productFilter" onchange="updateDashboard()">
+                <option value="all">Todos os Produtos</option>
+            </select>
+
+            <!-- NOVO: Filtro de Mês -->
+            <select id="monthFilter" onchange="updateDashboard()">
+                <option value="all">Todos os Meses</option>
+                <option value="0">Janeiro</option>
+                <option value="1">Fevereiro</option>
+                <option value="2">Março</option>
             </select>
         </div>
     </header>
@@ -266,7 +281,6 @@
             // Ajuste CSS do grid de KPIs para ocupar espaço corretamente
             const kpis = document.querySelectorAll('.kpi-card:not([style*="display:none"])');
             kpis.forEach(k => k.style.gridColumn = "span 1");
-            // Se tela grande, o span pode ser ajustado, mas o padrão CSS cuida disso.
 
             updateDashboard();
         }
@@ -275,10 +289,13 @@
         function populateFilters() {
             const regions = [...new Set(salesData.map(d => d.region))].sort();
             const sellers = [...new Set(salesData.map(d => d.seller))].sort();
+            const products = [...new Set(salesData.map(d => d.product))].sort(); // Novo
 
             const regionSelect = document.getElementById('regionFilter');
             const sellerSelect = document.getElementById('sellerFilter');
+            const productSelect = document.getElementById('productFilter'); // Novo
 
+            // Popula Regiões
             regions.forEach(r => {
                 const opt = document.createElement('option');
                 opt.value = r;
@@ -286,22 +303,41 @@
                 regionSelect.appendChild(opt);
             });
 
+            // Popula Vendedores
             sellers.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s;
                 opt.textContent = s;
                 sellerSelect.appendChild(opt);
             });
+
+            // Popula Produtos (NOVO)
+            products.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = p;
+                productSelect.appendChild(opt);
+            });
+            
+            // Mês já está hardcoded no HTML pois são fixos (Jan/Fev/Mar)
         }
 
         function getFilteredData() {
             const regionVal = document.getElementById('regionFilter').value;
             const sellerVal = document.getElementById('sellerFilter').value;
+            const productVal = document.getElementById('productFilter').value; // Novo
+            const monthVal = document.getElementById('monthFilter').value; // Novo
 
             return salesData.filter(item => {
+                const itemDate = new Date(item.date);
+                const itemMonth = itemDate.getMonth().toString(); // 0 = Jan, 1 = Fev...
+
                 const matchRegion = regionVal === 'all' || item.region === regionVal;
                 const matchSeller = sellerVal === 'all' || item.seller === sellerVal;
-                return matchRegion && matchSeller;
+                const matchProduct = productVal === 'all' || item.product === productVal; // Novo
+                const matchMonth = monthVal === 'all' || itemMonth === monthVal; // Novo
+
+                return matchRegion && matchSeller && matchProduct && matchMonth;
             });
         }
 
