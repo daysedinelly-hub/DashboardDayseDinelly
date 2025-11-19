@@ -224,13 +224,15 @@
             <span class="kpi-title">Ticket Médio</span>
             <span class="kpi-value" id="kpiAvgTicket">€ 0,00</span>
         </div>
-        <!-- Placeholder para manter grid de 4 colunas alinhado ou usar CSS grid vazio -->
-        <div class="kpi-card" style="border-left: 5px solid #f1c40f; display:none;"></div> 
-        <!-- Ajuste: Vamos usar 3 KPIs ocupando o topo. Em CSS Grid 4 colunas, o primeiro gráfico ocupará a linha toda abaixo -->
+        <!-- NOVO KPI: Transações Totais -->
+        <div class="kpi-card" style="border-left: 5px solid #e67e22;">
+            <span class="kpi-title">Nº Transações</span>
+            <span class="kpi-value" id="kpiTransactions">0</span>
+        </div> 
 
         <!-- Gráfico de Linha: Evolução Temporal (Ocupa largura total) -->
         <div class="chart-container full-width">
-            <div class="chart-title">Evolução Mensal (Jan - Mar)</div>
+            <div class="chart-title">Evolução Mensal (Vendas vs. Transações)</div>
             <canvas id="lineChart"></canvas>
         </div>
 
@@ -353,10 +355,12 @@
             const totalSales = data.reduce((acc, curr) => acc + curr.total, 0);
             const totalUnits = data.reduce((acc, curr) => acc + curr.units, 0);
             const avgTicket = data.length > 0 ? totalSales / data.length : 0;
+            const totalTransactions = data.length; // Contagem de registros
 
             document.getElementById('kpiTotalSales').innerText = formatCurrency(totalSales);
             document.getElementById('kpiUnits').innerText = totalUnits;
             document.getElementById('kpiAvgTicket').innerText = formatCurrency(avgTicket);
+            document.getElementById('kpiTransactions').innerText = totalTransactions; // Atualiza novo KPI
         }
 
         // --- 5. GRÁFICOS ---
@@ -366,12 +370,17 @@
 
             // -- Preparação de Dados --
             
-            // 1. Evolução Mensal
+            // 1. Evolução Mensal (Vendas e Transações)
             const months = ['Janeiro', 'Fevereiro', 'Março'];
             const salesByMonth = [0, 0, 0];
+            const transactionsByMonth = [0, 0, 0]; // Novo array para contagem
+
             data.forEach(d => {
                 const monthIndex = new Date(d.date).getMonth(); // 0=Jan, 1=Fev, 2=Mar
-                if(monthIndex <= 2) salesByMonth[monthIndex] += d.total;
+                if(monthIndex <= 2) {
+                    salesByMonth[monthIndex] += d.total;
+                    transactionsByMonth[monthIndex] += 1; // Incrementa contagem
+                }
             });
 
             // 2. Região
@@ -389,17 +398,50 @@
             data.forEach(d => productMap[d.product] = (productMap[d.product] || 0) + d.total);
 
             // -- Renderização (Chart.js) --
+            
+            // Gráfico de Linha com Eixo Duplo
             createOrUpdateChart('lineChart', 'line', {
                 labels: months,
-                datasets: [{
-                    label: 'Vendas (€)',
-                    data: salesByMonth,
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
+                datasets: [
+                    {
+                        label: 'Vendas (€)',
+                        data: salesByMonth,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y' // Eixo esquerdo
+                    },
+                    {
+                        label: 'Nº Transações',
+                        data: transactionsByMonth,
+                        borderColor: '#e67e22',
+                        backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5], // Linha tracejada para diferenciar
+                        fill: false,
+                        tension: 0.4,
+                        yAxisID: 'y1' // Eixo direito
+                    }
+                ]
+            }, {
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: { display: true, text: 'Valor (€)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false }, // Remove grade do segundo eixo para não poluir
+                        title: { display: true, text: 'Qtd. Transações' },
+                        ticks: { stepSize: 1 } // Garante números inteiros
+                    }
+                }
             });
 
             createOrUpdateChart('regionChart', 'bar', {
